@@ -4,20 +4,36 @@ import { log } from "../logger.js";
 
 const client = new Anthropic();
 
+type Position = "opening" | "middle" | "closing";
+
 interface SessionContext {
   outline: string;
   style: string;
   tone: string;
 }
 
-function buildSystemPrompt(ctx: SessionContext): string {
+const POSITION_GUIDANCE: Record<Position, string> = {
+  opening:
+    "The writer is at the OPENING of the article. Your suggestion must directly reflect the outline's premise or hook. If the preceding text is sparse, lean on the outline to establish the starting angle — do not drift from it.",
+  middle:
+    "The writer is in the MIDDLE of the article. Your suggestion should maintain the argument's flow as laid out in the outline. Bridge ideas already introduced toward what the outline still promises.",
+  closing:
+    "The writer is near the CLOSING of the article. Your suggestion should guide toward a conclusion that resolves the outline's core premise. Help wrap up, not open new threads.",
+};
+
+function buildSystemPrompt(ctx: SessionContext, position: Position): string {
   return `You are a writing assistant that helps writers find the right words.
 Your job is to suggest the next 5-7 words that naturally bridge the current sentence — not complete it. You are a guide, not a ghostwriter.
 
 Writing context:
 - Style: ${ctx.style}
 - Tone: ${ctx.tone}
-- Article outline: ${ctx.outline}
+
+Article outline (PRIMARY DIRECTIVE — your suggestion must be grounded in and aligned with this outline, especially when the preceding text is short or ambiguous):
+${ctx.outline}
+
+Position in article: ${position.toUpperCase()}
+${POSITION_GUIDANCE[position]}
 
 Rules:
 - Return ONLY the word suggestion, no punctuation at the end
@@ -64,6 +80,7 @@ Rules:
 export async function getBridgeSuggestion(
   precedingText: string,
   context: SessionContext,
+  position: Position = "middle",
 ): Promise<string> {
   try {
     log.info("Goes here");
@@ -71,7 +88,7 @@ export async function getBridgeSuggestion(
       model: "claude-haiku-4-5-20251001",
       max_tokens: 20,
       temperature: 0.7,
-      system: buildSystemPrompt(context),
+      system: buildSystemPrompt(context, position),
       messages: [
         {
           role: "user",

@@ -6,11 +6,13 @@ import { truncatePrecedingText } from "../utils/textUtils.js";
 import { log } from "../logger.js";
 
 type Mode = "word" | "bridge";
+type Position = "opening" | "middle" | "closing";
 
 interface PredictBody {
   sessionId: string;
   mode: Mode;
   precedingText: string;
+  position?: Position;
 }
 
 interface SessionContext {
@@ -21,7 +23,7 @@ interface SessionContext {
 
 export async function predictRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Body: PredictBody }>("/predict", async (request, reply) => {
-    const { sessionId, mode, precedingText } = request.body ?? {};
+    const { sessionId, mode, precedingText, position = "middle" } = request.body ?? {};
 
     // Validate required fields
     for (const field of ["sessionId", "mode", "precedingText"] as const) {
@@ -74,7 +76,7 @@ export async function predictRoutes(app: FastifyInstance): Promise<void> {
       return reply.status(404).send({ error: "Session not found or expired" });
     }
 
-    const suggestion = await getBridgeSuggestion(text, context);
+    const suggestion = await getBridgeSuggestion(text, context, position);
     cache.set(cacheKey, suggestion, TTL.PREDICTION);
 
     return reply.send({ mode, suggestion, confidence: 0.85, cached: false });
