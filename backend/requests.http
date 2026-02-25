@@ -1,0 +1,84 @@
+@baseUrl = http://localhost:3000
+@sessionId = {{createSession.response.body.sessionId}}
+
+### Create session
+# @name createSession
+POST {{baseUrl}}/session
+Content-Type: application/json
+
+{
+  "outline": "An article about the decline of attention spans in the age of social media",
+  "style": "journalistic",
+  "tone": "calm"
+}
+
+###
+
+### Predict — bridge mode
+POST {{baseUrl}}/predict
+Content-Type: application/json
+
+{
+  "sessionId": "{{sessionId}}",
+  "mode": "bridge",
+  "precedingText": "The average person now checks their phone over a hundred times a day, and yet "
+}
+
+###
+
+### Predict — word mode
+POST {{baseUrl}}/predict
+Content-Type: application/json
+
+{
+  "sessionId": "{{sessionId}}",
+  "mode": "word",
+  "precedingText": "The economy is col"
+}
+
+###
+
+### Predict — empty precedingText (should return empty suggestion)
+POST {{baseUrl}}/predict
+Content-Type: application/json
+
+{
+  "sessionId": "{{sessionId}}",
+  "mode": "bridge",
+  "precedingText": ""
+}
+
+###
+
+### Predict — unknown session (should return 404)
+POST {{baseUrl}}/predict
+Content-Type: application/json
+
+{
+  "sessionId": "00000000-0000-0000-0000-000000000000",
+  "mode": "bridge",
+  "precedingText": "The economy is "
+}
+
+###
+
+### Create session — missing field (should return 400)
+POST {{baseUrl}}/session
+Content-Type: application/json
+
+{
+  "outline": "An article about AI",
+  "style": "academic"
+}
+
+###
+
+### Predict — invalid mode (should return 400)
+POST {{baseUrl}}/predict
+Content-Type: application/json
+
+{
+  "sessionId": "{{sessionId}}",
+  "mode": "autocomplete",
+  "precedingText": "The economy is "
+}

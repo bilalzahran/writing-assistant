@@ -1,0 +1,26 @@
+{
+  "name": "guided-write-backend",
+  "version": "0.1.0",
+  "description": "Writing assistant backend with ghost-text suggestions",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch --include './src/**/*.ts' --env-file .env src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.3",
+    "@fastify/cors": "^11.2.0",
+    "fastify": "^5.2.1",
+    "pino": "^10.3.1",
+    "uuid": "^11.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/uuid": "^10.0.0",
+    "pino-pretty": "^13.1.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
