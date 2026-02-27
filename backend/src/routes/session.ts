@@ -12,12 +12,8 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Body: SessionBody }>("/session", async (request, reply) => {
     const { outline, style, tone } = request.body ?? {};
 
-    for (const field of ["outline", "style", "tone"] as const) {
-      if (!request.body?.[field]) {
-        return reply
-          .status(400)
-          .send({ error: `missing required field: ${field}` });
-      }
+    if (!outline) {
+      return reply.status(400).send({ error: "missing required field: outline" });
     }
 
     const sessionId = uuidv4();

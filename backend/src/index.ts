@@ -3,15 +3,18 @@ import cors from "@fastify/cors";
 import { log } from "./logger.js";
 import { sessionRoutes } from "./routes/session.js";
 import { predictRoutes } from "./routes/predict.js";
+import { postRoutes } from "./routes/posts.js";
 
 const app = Fastify({ loggerInstance: log });
 
 app.register(cors, {
-  origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+  origin: true,
+  methods: ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"],
 });
 
-app.register(sessionRoutes);
 app.register(predictRoutes);
+app.register(sessionRoutes);
+app.register(postRoutes);
 
 async function start(): Promise<void> {
   const port = Number(process.env.PORT ?? 3000);
