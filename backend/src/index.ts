@@ -4,6 +4,7 @@ import { log } from "./logger.js";
 import { sessionRoutes } from "./routes/session.js";
 import { predictRoutes } from "./routes/predict.js";
 import { postRoutes } from "./routes/posts.js";
+import { nextRoutes } from "./routes/next.js";
 
 const app = Fastify({ loggerInstance: log });
 
@@ -13,6 +14,7 @@ app.register(cors, {
 });
 
 app.register(predictRoutes);
+app.register(nextRoutes);
 app.register(sessionRoutes);
 app.register(postRoutes);
 

@@ -41,6 +41,8 @@ Their piece is about: "${outline}"
 Style: ${style}
 Tone: ${tone}
 
+Before generating your suggestion, identify which specific part of the outline the writer is currently working on based on their preceding text. Use that section to guide your suggestion — not the outline in general.
+
 Suggest the first 5-7 words of an opening sentence that:
 - Hooks the reader immediately
 - Feels natural in a ${tone} voice
@@ -59,6 +61,8 @@ If you cannot generate a helpful suggestion, return an empty string.`,
 Their piece is about: "${outline}"
 Style: ${style}
 Tone: ${tone}
+
+Before generating your suggestion, identify which specific part of the outline the writer is currently working on based on their preceding text. Use that section to guide your suggestion — not the outline in general.
 
 Suggest the next 5-7 words that:
 - Feel like a natural extension of what they started
@@ -79,6 +83,8 @@ Their piece is about: "${outline}"
 Style: ${style}
 Tone: ${tone}
 
+Before generating your suggestion, identify which specific part of the outline the writer is currently working on based on their preceding text. Use that section to guide your suggestion — not the outline in general.
+
 Suggest the next 5-7 words that:
 - Maintain the voice and energy they've established
 - Help develop or support the opening premise
@@ -98,6 +104,8 @@ Their piece is about: "${outline}"
 Style: ${style}
 Tone: ${tone}
 
+Before generating your suggestion, identify which specific part of the outline the writer is currently working on based on their preceding text. Use that section to guide your suggestion — not the outline in general.
+
 Suggest the next 5-7 words that:
 - Feel like the piece is moving toward resolution
 - Carry the same tone without introducing new ideas
@@ -116,6 +124,8 @@ If the sentence already feels complete, return an empty string.`,
 Their piece is about: "${outline}"
 Style: ${style}
 Tone: ${tone}
+
+Before generating your suggestion, identify which specific part of the outline the writer is currently working on based on their preceding text. Use that section to guide your suggestion — not the outline in general.
 
 Suggest the next 5-7 words that:
 - Keep the argument or narrative moving forward
@@ -191,5 +201,56 @@ export async function getBridgeSuggestion(
   } catch (error) {
     log.error({ err: error }, "LLM call failed");
     return "";
+  }
+}
+
+export async function getNextSuggestion(
+  lastParagraph: string,
+  context: SessionContext,
+  currentSection?: string,
+): Promise<{ phrase: string; angle: string }> {
+  try {
+    const currentSectionLine = currentSection
+      ? `\nThe writer just finished working on this section of the outline:\n"${currentSection}"\n`
+      : "";
+    const afterLine = currentSection
+      ? `\nBased on the outline, identify what logically comes AFTER "${currentSection}".\nThat is the territory for your suggestion.\n`
+      : "\nBased on the outline, identify what logically comes next after what they just wrote.\nThat is the territory for your suggestion.\n";
+
+    const message = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 120,
+      temperature: 0.7,
+      system: `You are a writing assistant helping a writer transition to their next section.
+
+Their full outline: "${context.outline}"
+Style: ${context.style}
+Tone: ${context.tone}
+${currentSectionLine}
+Their last paragraph:
+"${lastParagraph}"
+${afterLine}
+Return a JSON object with exactly two fields:
+- "phrase": the first 5-7 words to open the next section. Natural, ${context.tone} voice. No punctuation at the end.
+- "angle": one concrete sentence describing the specific topic or argument to develop next. Reference actual concepts from the outline — be specific, not generic.
+
+Return ONLY valid JSON. No explanation. No preamble. No markdown backticks.
+If you cannot determine a helpful next section, return: {"phrase": "", "angle": ""}`,
+      messages: [{ role: "user", content: "What should I write next?" }],
+    });
+    const block = message.content[0];
+    if (!block || block.type !== "text") return { phrase: "", angle: "" };
+    const text = block.text;
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end === -1) return { phrase: "", angle: "" };
+    const parsed = JSON.parse(text.slice(start, end + 1));
+    return {
+      phrase: parsed.phrase?.trim().replace(/[.,!?]$/, "") ?? "",
+      angle: parsed.angle?.trim() ?? "",
+    };
+  } catch (error) {
+    log.error({ err: error }, "LLM next call failed");
+    return { phrase: "", angle: "" };
   }
 }
