@@ -11,6 +11,7 @@ interface SessionContext {
   outline: string;
   style: string;
   tone: string;
+  thesis?: string;
 }
 
 interface PromptPair {
@@ -22,6 +23,7 @@ function promptBuilder({
   outline,
   style,
   tone,
+  thesis,
   precedingText,
   stage,
   position,
@@ -29,15 +31,18 @@ function promptBuilder({
   outline: string;
   style: string;
   tone: string;
+  thesis?: string;
   precedingText: string;
   stage: Stage;
   position: Position;
 }): PromptPair {
+  const thesisLine = thesis ? `The article's core argument: "${thesis}"` : '';
   if (stage === "start") {
     return {
       system: `You are a writing assistant helping a writer who is staring at a blank page.
 
 Their piece is about: "${outline}"
+${thesisLine ? '\n' + thesisLine : ''}
 Style: ${style}
 Tone: ${tone}
 
@@ -59,6 +64,7 @@ If you cannot generate a helpful suggestion, return an empty string.`,
       system: `You are a writing assistant helping a writer establish their opening.
 
 Their piece is about: "${outline}"
+${thesisLine ? '\n' + thesisLine : ''}
 Style: ${style}
 Tone: ${tone}
 
@@ -80,6 +86,7 @@ If the thought already feels complete, return an empty string.`,
       system: `You are a writing assistant helping a writer build momentum in their opening paragraph.
 
 Their piece is about: "${outline}"
+${thesisLine ? '\n' + thesisLine : ''}
 Style: ${style}
 Tone: ${tone}
 
@@ -101,6 +108,7 @@ If the sentence already feels complete, return an empty string.`,
       system: `You are a writing assistant helping a writer bring their piece to a close.
 
 Their piece is about: "${outline}"
+${thesisLine ? '\n' + thesisLine : ''}
 Style: ${style}
 Tone: ${tone}
 
@@ -122,6 +130,7 @@ If the sentence already feels complete, return an empty string.`,
     system: `You are a writing assistant helping a writer maintain flow through the body of their piece.
 
 Their piece is about: "${outline}"
+${thesisLine ? '\n' + thesisLine : ''}
 Style: ${style}
 Tone: ${tone}
 
@@ -136,6 +145,38 @@ Return ONLY the words. No punctuation at the end. No explanation. No preamble.
 If the sentence already feels complete, return an empty string.`,
     user: `Continue this naturally: "${precedingText}"`,
   };
+}
+
+export async function deriveThesis(
+  outline: string,
+  style: string,
+  tone: string,
+): Promise<string> {
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 80,
+      messages: [{
+        role: 'user',
+        content: `Given this article outline: "${outline}"
+Style: ${style} | Tone: ${tone}
+
+In one sentence, state the concrete argument or solution this article makes.
+Be specific — reference actual methods, tools, or outcomes mentioned in the outline.
+If the outline mentions specific technologies, libraries, or metrics, include them.
+
+Return ONLY the one sentence. No preamble. No punctuation at the end.`
+      }]
+    });
+    const text = response.content
+      .filter(block => block.type === 'text')
+      .map(block => (block as { type: 'text'; text: string }).text)
+      .join('')
+      .trim();
+    return text ?? '';
+  } catch {
+    return '';
+  }
 }
 
 export async function getWordSuggestion(
@@ -182,6 +223,7 @@ export async function getBridgeSuggestion(
       outline: context.outline,
       style: context.style,
       tone: context.tone,
+      thesis: context.thesis,
       precedingText,
       stage,
       position,
@@ -224,6 +266,7 @@ export async function getNextSuggestion(
       system: `You are a writing assistant helping a writer transition to their next section.
 
 Their full outline: "${context.outline}"
+${context.thesis ? `\nThe article's core argument: "${context.thesis}"` : ''}
 Style: ${context.style}
 Tone: ${context.tone}
 ${currentSectionLine}
